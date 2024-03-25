@@ -1,0 +1,40 @@
+import pandas as pd
+from fuzzywuzzy import process
+
+similarity_threshold = 90
+
+#CHANGE AS NEEDED
+source_file = 'list_companies.xlsx'
+target_file = 'list_companies_codes.xlsx'
+output_file = 'output.xlsx'
+
+def match_and_update_company_names(source_file, target_file, output_file):
+    # Read the Excel files
+    source_df = pd.read_excel(source_file)
+    target_df = pd.read_excel(target_file)
+    
+    # Initialize the columns to avoid KeyError
+    source_df['Matched Name'] = pd.NA
+    source_df['Stock Code'] = pd.NA
+    
+    # Create a dictionary from the target DataFrame for faster lookup
+    target_dict = pd.Series(target_df['Stock Code'].values,index=target_df['Name']).to_dict()
+    
+    # For each company name in the source file, find the best match in the target file
+    for index, row in source_df.iterrows():
+        match_result = process.extractOne(row['Name'], target_df['Name'].tolist(), score_cutoff=similarity_threshold)
+        if match_result:
+            match, similarity = match_result  # This should only have two elements now
+            # If a match is found with similarity 90% or higher, update the source DataFrame
+            if match in target_dict:
+                source_df.at[index, 'Matched Name'] = match
+                source_df.at[index, 'Stock Code'] = target_dict[match]
+            else:
+                print(f"Match found but not in target dictionary: {match}")
+    
+    # Save the updated source DataFrame to a new Excel file
+    source_df.to_excel(output_file, index=False)
+
+
+
+match_and_update_company_names(source_file, target_file, output_file)
